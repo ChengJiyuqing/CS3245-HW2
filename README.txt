@@ -1,4 +1,4 @@
-This is the README file for A020420U's submission
+This is the README file for A0204208U - A0000000X's submission
 Email(s): e0421414@u.nus.edu
 
 == Python Version ==
