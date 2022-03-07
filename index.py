@@ -29,6 +29,7 @@ BLOCK_SIZE = 50  # artificial threshold to simulate memory limit in terms of num
 lst = []
 
 all_docIDs = []
+all_docID_file = "all_docID.txt"
 
 def build_index(in_dir, out_dict, out_postings):
     """
@@ -62,6 +63,9 @@ def build_index(in_dir, out_dict, out_postings):
     
     #for dirname, dirnames, filenames in os.walk(in_dir):
     for filename in filenames:
+        
+        if not filename in all_docIDs:
+            all_docIDs.append(int(filename))
         full_filename = os.path.join(in_dir, filename)
         text = open(full_filename, 'r', encoding="utf8").read()
                 
@@ -120,8 +124,9 @@ def build_index(in_dir, out_dict, out_postings):
 
     f_dict = open(out_dict, "wb")
     f_post = open(out_postings, 'wb')
-
-    pickle.dump(all_docIDs, f_post)
+    f_docID = open(all_docID_file, 'wb')
+    print(all_docIDs)
+    pickle.dump(all_docIDs, f_docID)
     pickle.dump(postings, f_post)
     pickle.dump(dictionary, f_dict)
 
@@ -142,9 +147,7 @@ def write_block_to_disk(dictionary,block_counter):
         postingslist = pickle.dumps(dictionary[term])
         #postings_size = sys.getsizeof(postings_byte) # get size of posting in bytes
         
-        for i in postingslist:
-            if not i in all_docIDs:
-                all_docIDs.append(i)
+        
 
         # write current line of term into dictionary file, in the form of {term: pointer (to postingslist), docFrequency}
         #print(dictionary[term])
