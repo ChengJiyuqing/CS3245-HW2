@@ -120,18 +120,35 @@ def build_index(in_dir, out_dict, out_postings):
     postings_file = open(posting_file_name, 'rb')
     dictionary_file = open(dictionary_file_name, 'rb') 
 
-    postings = pickle.load(postings_file)
-    postings = add_skip_pointer(postings)
+    # os.rename(posting_file_name, out_postings)
+    # os.rename(dictionary_file_name, out_dict)
+    
     dictionary = pickle.load(dictionary_file)
-    dictionary['docIDs'] = all_docIDs
-
 
     f_dict = open(out_dict, "wb")
     f_post = open(out_postings, 'wb')
-    print(all_docIDs)
+    # # print(all_docIDs)
 
+    # i = 0
+    for item in dictionary:
+        print(item)
+        print(dictionary[item])
+        pointer = dictionary[item][0]
+        postings_file.seek(pointer)
+        postings = pickle.load(postings_file)
+        postings = add_skip_pointer(postings)
+
+        pointer = f_post.tell()
+        dictionary[item] = (pointer, dictionary[item][1])
+        pickle.dump(postings, f_post)
+        # print("..", postings)
+        # i += 1
     
-    pickle.dump(postings, f_post)
+    
+    pointer = f_post.tell()
+    pickle.dump(all_docIDs, f_post)
+    dictionary['docIDs'] = pointer
+
     pickle.dump(dictionary, f_dict)
     
     f_dict.close()
@@ -218,6 +235,7 @@ def merge_two_blocks(index1, index2):
 
     newDict = {}
 
+    pointer = savepostings_file.tell()
     while (pointer1 < len(terms1) and pointer2 < len(terms2)):
         term1 = terms1[pointer1]
         term2 = terms2[pointer2]
@@ -228,7 +246,7 @@ def merge_two_blocks(index1, index2):
             
 
             
-            pointer = savepostings_file.tell()
+            
 
             term1 = (term1[0], (pointer, term1[1][1])) # update pointer to postings
             newDict[term1[0]] = term1[1]
@@ -244,7 +262,7 @@ def merge_two_blocks(index1, index2):
             
 
             # savepostings_file = open("postings{}.txt".format(save_index), 'wb')
-            pointer = savepostings_file.tell()
+            # pointer = savepostings_file.tell()
 
             term2 = (term2[0], (pointer, term2[1][1])) # update pointer to postings
             newDict[term2[0]] = term2[1]
@@ -269,7 +287,7 @@ def merge_two_blocks(index1, index2):
             newpostings = postingslist2
 
             # savepostings_file = open("postings{}.txt".format(save_index), 'wb')
-            pointer = savepostings_file.tell()
+            # pointer = savepostings_file.tell()
 
             term2 = (term2[0], (pointer, term2[1][1])) # update pointer to postings
             newDict[term2[0]] = term2[1]
@@ -319,6 +337,7 @@ def merge_two_blocks(index1, index2):
     dictionary_file_1.close()
     postings_file_2.close()
     dictionary_file_2.close()
+    savepostings_file.close()
 
     savedict_file = open("dictionary{}.txt".format(save_index), 'wb')
     pickle.dump(newDict, savedict_file)
@@ -385,6 +404,16 @@ if input_directory == None or output_file_postings == None or output_file_dictio
     sys.exit(2)
 
 build_index(input_directory, output_file_dictionary, output_file_postings)
+
+dictionary_file = open(output_file_dictionary, 'rb')
+posting = open(output_file_postings, 'rb')
+dictionary = pickle.load(dictionary_file)
+pointer = dictionary['you'][0]
+print(dictionary)
+print(len(dictionary))
+posting.seek(pointer)
+print(pickle.load(posting))
+
 # build_index("../training_test/", "dictionary.txt", "postings.txt")
 # a = {"a": [1, 2], "b": [2], "c": [3]}
 # b = {"a": [3], "b": [4], "c": [2]}
