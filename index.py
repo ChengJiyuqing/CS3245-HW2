@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+from logging.config import dictConfig
 import re
 import nltk
 import sys
@@ -120,17 +121,21 @@ def build_index(in_dir, out_dict, out_postings):
     dictionary_file = open(dictionary_file_name, 'rb') 
 
     postings = pickle.load(postings_file)
+    postings = add_skip_pointer(postings)
     dictionary = pickle.load(dictionary_file)
+    dictionary['docIDs'] = all_docIDs
+
 
     f_dict = open(out_dict, "wb")
     f_post = open(out_postings, 'wb')
-    f_docID = open(all_docID_file, 'wb')
     print(all_docIDs)
-    pickle.dump(all_docIDs, f_docID)
+
+    
     pickle.dump(postings, f_post)
     pickle.dump(dictionary, f_dict)
-
-    print(final_index)
+    
+    f_dict.close()
+    f_post.close()
     # test(lst)
            
     
@@ -185,180 +190,6 @@ def binary_merge(lst):
         else: # length is 2
             return merge_two_blocks(lst[0], lst[1])
 
-def merge_two_blocks_1(index1, index2, total_files):
-    print("index1: ", index1, "index2: ", index2)
-    num_of_repeated_items = 0
-    num = 0
-
-    save_index = len(blocksizes)
-    # if index1 < index2: 
-    #     save_index = index1 + file_count
-    # else: 
-    #     save_index = index2 + file_count
-    
-    posting_file_name_1 = "postings{}.txt".format(index1)
-    dictionary_file_name_1 = "dictionary{}.txt".format(index1)
-    posting_file_name_2 = "postings{}.txt".format(index2)
-    dictionary_file_name_2 = "dictionary{}.txt".format(index2)
-    postings_file_1 = open(posting_file_name_1, 'rb')
-    dictionary_file_1 = open(dictionary_file_name_1, 'rb')
-    postings_file_2 = open(posting_file_name_2, 'rb')
-    dictionary_file_2 = open(dictionary_file_name_2, 'rb')
-    
-    pointer1 = 0
-    pointer2 = 0
-    length1 = blocksizes[index1]
-    length2 = blocksizes[index2]
-
-    print("length1: ", length1)
-    print("lengh2: ", length2)
-    
-    POINTER1 = 0
-    POINTER2 = 1
-
-    last_moved = -1
-
-    # print(pickle.load(dictionary_file_1))
-    # print(pickle.load(dictionary_file_1))
-    # print(pickle.load(dictionary_file_1))
-
-    while pointer1 < length1 and pointer2 < length2:
-        print("pointers: ", pointer1, pointer2)
-
-        if last_moved == POINTER2: 
-            if pointer2 + 1 < length2:
-                item2 = pickle.load(dictionary_file_2)
-        elif last_moved == POINTER1:
-            if pointer1 + 1 < length1:
-                item1 = pickle.load(dictionary_file_1)
-        else:
-            if pointer1 + 1 < length1:
-                item1 = pickle.load(dictionary_file_1)
-            if pointer2 + 1 < length2:
-                item2 = pickle.load(dictionary_file_2)
-
-        print("item1: ", item1)
-        print("item2: ", item2)
-        
-        if item1[0] < item2[0] :
-            postings_file_1.seek(item1[1][0])
-            postingslist1 = pickle.load(postings_file_1)
-            print(postingslist1)
-            
-
-            savepostings_file = open("postings{}.txt".format(save_index), 'wb')
-            savedict_file = open("dictionary{}.txt".format(save_index), 'wb')
-            pointer = savepostings_file.tell()
-            item1 = (item1[0], (pointer, item1[1][1])) # update pointer to postings
-            pickle.dump(item1, savedict_file)
-            pickle.dump(postingslist1, savepostings_file)
-            num += 1
-            savepostings_file.close()
-            savedict_file.close()
-
-            pointer1 = pointer1 + 1
-            last_moved = POINTER1
-        
-        elif item1[0] > item2[0]:
-            postings_file_2.seek(item2[1][0])
-            postingslist2 = pickle.load(postings_file_2)
-            print(postingslist2)
-            
-            
-            savepostings_file = open("postings{}.txt".format(save_index), 'wb')
-            savedict_file = open("dictionary{}.txt".format(save_index), 'wb')
-            pointer = savepostings_file.tell()
-            item2 = (item2[0], (pointer, item2[1][1])) # update pointer to postings
-            pickle.dump(item2, savedict_file)
-            pickle.dump(postingslist2, savepostings_file)
-            num += 1
-            savepostings_file.close()
-            savedict_file.close()
-
-            pointer2 = pointer2 + 1
-            last_moved = POINTER2
-        
-        else:
-            num_of_repeated_items += 1
-
-            postings_file_1.seek(item1[1][0])
-            postingslist1 = pickle.load(postings_file_1)
-            postings_file_2.seek(item2[1][0])
-            postingslist2 = pickle.load(postings_file_2)
-            for x in postingslist1:
-                if not (x in postingslist2) :
-                    postingslist2.append(x)
-            postingslist2.sort()
-            print(postingslist2)
-
-            
-            
-            savepostings_file = open("postings{}.txt".format(save_index), 'wb')
-            savedict_file = open("dictionary{}.txt".format(save_index), 'wb')
-            pointer = savepostings_file.tell()
-            item1 = (item1[0], (pointer, len(postingslist2)))
-            pickle.dump(item1, savedict_file)
-            pickle.dump(postingslist2, savepostings_file)
-            num += 1
-            savepostings_file.close()
-            savedict_file.close()
-
-            pointer1 = pointer1 + 1
-            pointer2 = pointer2 + 1
-
-            last_moved = -1
-    
-    if pointer1 < length1:
-        while pointer1 < length1:
-            if pointer1 < length1:
-                item1 = pickle.load(dictionary_file_1)
-
-            postings_file_1.seek(item1[1][0])
-            postingslist1 = pickle.load(postings_file_1)
-            
-
-            savepostings_file = open("postings{}.txt".format(save_index), 'wb')
-            savedict_file = open("dictionary{}.txt".format(save_index), 'wb')
-            pointer = savepostings_file.tell()
-            item1 = (item1[0], (pointer, item1[1][1])) # update pointer to postings
-            pickle.dump(item1, savedict_file)
-            pickle.dump(postingslist1, savepostings_file)
-            savepostings_file.close()
-            savedict_file.close()
-
-            pointer1 = pointer1 + 1
-            # 
-            #     
-
-    elif pointer2 < length2:
-        while pointer2 < length2:
-            if pointer2 < length2:
-                item2 = pickle.load(dictionary_file_2)
-
-            postings_file_2.seek(item2[1][0])
-            postingslist2 = pickle.load(postings_file_2)
-            
-            savepostings_file = open("postings{}.txt".format(save_index), 'wb')
-            savedict_file = open("dictionary{}.txt".format(save_index), 'wb')
-            pointer = savepostings_file.tell()
-            item2 = (item2[0], (pointer, item2[1][1])) # update pointer to postings
-            pickle.dump(item2, savedict_file)
-            pickle.dump(postingslist2, savepostings_file)
-            savepostings_file.close()
-            savedict_file.close()
-
-            pointer2 = pointer2 + 1
-            # if pointer2 < length2:
-            #     
-
-    blocksizes.append(num)
-    postings_file_1.close()
-    dictionary_file_1.close()
-    postings_file_2.close()
-    dictionary_file_2.close()
-
-
-    return len(blocksizes) - 1
 
 
 def merge_two_blocks(index1, index2):
@@ -393,7 +224,7 @@ def merge_two_blocks(index1, index2):
         if term1[0] < term2[0]:
             postings_file_1.seek(term1[1][0])
             postingslist1 = pickle.load(postings_file_1)
-            postingslist1 = add_skip_pointer(postingslist1)
+            # postingslist1 = add_skip_pointer(postingslist1)
             
 
             
@@ -409,7 +240,7 @@ def merge_two_blocks(index1, index2):
         elif term1[0] > term2[0]:
             postings_file_2.seek(term2[1][0])
             postingslist = pickle.load(postings_file_2)
-            postingslist = add_skip_pointer(postingslist)
+            # postingslist = add_skip_pointer(postingslist)
             
 
             # savepostings_file = open("postings{}.txt".format(save_index), 'wb')
@@ -435,7 +266,7 @@ def merge_two_blocks(index1, index2):
                     postingslist2.append(i)
             postingslist2.sort()
             
-            newpostings = add_skip_pointer(postingslist2)
+            newpostings = postingslist2
 
             # savepostings_file = open("postings{}.txt".format(save_index), 'wb')
             pointer = savepostings_file.tell()
@@ -453,7 +284,7 @@ def merge_two_blocks(index1, index2):
         for term1 in terms1:
             postings_file_1.seek(term1[1][0])
             postingslist1 = pickle.load(postings_file_1)
-            postingslist1 = add_skip_pointer(postingslist1)
+            # postingslist1 = add_skip_pointer(postingslist1)
             
 
             # savepostings_file = open("postings{}.txt".format(save_index), 'wb')
